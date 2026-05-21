@@ -90,9 +90,9 @@ def extract_airfield_data(pdf_path):
             ctaf = 'N/A'
         
         # Extract AWOS/ASOS frequency
-        awos_match = re.search(r'(AWOS|ASOS)[^0-9]*(\d{3})[^\d]*(\d{3})', text, re.IGNORECASE)
+        awos_match = re.search(r'AWOS.*?(\d{3})[^\d]*(\d{3})', text, re.IGNORECASE)
         if awos_match:
-            awos = awos_match.group(2) + '.' + awos_match.group(3)
+            awos = awos_match.group(1) + '.' + awos_match.group(2)
         else:
             awos = 'N/A'
         
@@ -211,7 +211,7 @@ def generate_html():
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
     <meta name="theme-color" content="#000000">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -226,12 +226,23 @@ def generate_html():
                 console.log('Service Worker registration failed:', error);
             }});
         }}
+
+        // Force reflow on viewport changes for Chrome DevTools
+        window.addEventListener('resize', function() {{
+            document.body.style.zoom = '1';
+        }});
     </script>
     <style>
         * {{
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+        }}
+
+        html, body {{
+            width: 100%;
+            height: 100%;
+            overflow-x: hidden;
         }}
 
         :root {{
@@ -483,34 +494,36 @@ def generate_html():
         }}
 
         .hud-ctaf {{
-            text-align: right;
+            text-align: left;
             margin-top: 60px;
             display: flex;
-            align-items: baseline;
-            gap: 8px;
+            flex-direction: column;
+            align-items: flex-start;
         }}
 
         .hud-ctaf-label {{
-            font-size: 16px;
+            font-size: 14px;
             font-weight: 600;
             color: var(--hud-text);
             opacity: 0.8;
-            margin-bottom: 0;
+            margin-bottom: 2px;
+            white-space: nowrap;
         }}
 
         .hud-ctaf-value {{
-            font-size: 56px;
+            font-size: 40px;
             font-weight: 900;
             color: var(--hud-text);
             line-height: 1;
+            white-space: nowrap;
         }}
 
         .hud-awos {{
-            text-align: right;
+            text-align: left;
             margin-top: 8px;
             display: flex;
-            align-items: baseline;
-            gap: 8px;
+            flex-direction: column;
+            align-items: flex-start;
         }}
 
         .hud-awos-label {{
@@ -518,14 +531,16 @@ def generate_html():
             font-weight: 600;
             color: var(--hud-text);
             opacity: 0.8;
-            margin-bottom: 0;
+            margin-bottom: 2px;
+            white-space: nowrap;
         }}
 
         .hud-awos-value {{
-            font-size: 32px;
+            font-size: 40px;
             font-weight: 900;
             color: var(--hud-text);
             line-height: 1;
+            white-space: nowrap;
         }}
 
         .hud-bottom {{
@@ -677,6 +692,7 @@ def generate_html():
                 <div class="detail-item">Width: <span>{airfield.get('width', 'N/A')}'</span></div>
                 <div class="detail-item">Elev: <span>{airfield.get('elevation', 'N/A')}'</span></div>
                 <div class="detail-item">CTAF: <span>{airfield.get('ctaf', 'N/A')}</span></div>
+                <div class="detail-item">AWOS: <span>{airfield.get('awos', 'N/A')}</span></div>
             </div>
             <div class="distance-badge">--</div>
         </div>
