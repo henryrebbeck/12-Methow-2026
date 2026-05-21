@@ -109,22 +109,36 @@ def extract_airfield_data(pdf_path):
             width = 'N/A'
         
         # Extract Latitude - format: N 47° 2393′ (decimal minutes)
-        lat_match = re.search(r'Latitude\s+N\s+(\d+)°\s*(\d+)\s*′', text, re.IGNORECASE)
+        lat_match = re.search(r'Latitude\s*N\s*(\d+)\s*[°\*]\s*(\d+)\s*[′\']', text, re.IGNORECASE)
         if lat_match:
             degrees = int(lat_match.group(1))
             minutes_decimal = float(lat_match.group(2)) / 100
             latitude = degrees + (minutes_decimal / 60)
         else:
-            latitude = None
+            # Try alternative format
+            lat_match = re.search(r'Lat.*?(\d+)\s*[°\*]\s*(\d+)', text, re.IGNORECASE)
+            if lat_match:
+                degrees = int(lat_match.group(1))
+                minutes_decimal = float(lat_match.group(2)) / 100
+                latitude = degrees + (minutes_decimal / 60)
+            else:
+                latitude = None
         
         # Extract Longitude - format: W 120° 1241′ (decimal minutes)
-        lon_match = re.search(r'Longitude\s+W\s+(\d+)°\s*(\d+)\s*′', text, re.IGNORECASE)
+        lon_match = re.search(r'Longitude\s*W\s*(\d+)\s*[°\*]\s*(\d+)\s*[′\']', text, re.IGNORECASE)
         if lon_match:
             degrees = int(lon_match.group(1))
             minutes_decimal = float(lon_match.group(2)) / 100
             longitude = -(degrees + (minutes_decimal / 60))
         else:
-            longitude = None
+            # Try alternative format
+            lon_match = re.search(r'Lon.*?(\d+)\s*[°\*]\s*(\d+)', text, re.IGNORECASE)
+            if lon_match:
+                degrees = int(lon_match.group(1))
+                minutes_decimal = float(lon_match.group(2)) / 100
+                longitude = -(degrees + (minutes_decimal / 60))
+            else:
+                longitude = None
         
         return {
             'ctaf': ctaf,
