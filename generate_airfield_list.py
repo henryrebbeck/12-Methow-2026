@@ -98,18 +98,14 @@ def extract_airfield_data(pdf_path):
         tpa = tpa_match.group(1) if tpa_match else 'N/A'
         
         # Extract Runway dimensions and direction - handle spacing variations
-        runway_match = re.search(r'Runway[^;]*;\s*(\d+/\d+)\s*;\s*(\d+)\s*′?\s*×\s*(\d+)\s*′?', text, re.IGNORECASE)
-        if not runway_match:
-            runway_match = re.search(r'Runway[^;]*;(\d+/\d+);(\d+)′×(\d+)′', text, re.IGNORECASE)
+        runway_match = re.search(r'(\d{1,2}/\d{1,2}).*?(\d{3,5}).*?×.*?(\d{2,3})', text, re.IGNORECASE)
         if runway_match:
             runway_dir = runway_match.group(1)
             length = runway_match.group(2)
             width = runway_match.group(3)
         else:
             # Fallback: try to extract just dimensions
-            runway_match = re.search(r'Runway[^;]*;\s*(\d+)\s*′?\s*×\s*(\d+)\s*′?', text, re.IGNORECASE)
-            if not runway_match:
-                runway_match = re.search(r'Runway[^;]*;(\d+)′×(\d+)′', text, re.IGNORECASE)
+            runway_match = re.search(r'Runway.*?(\d{3,5}).*?×.*?(\d{2,3})', text, re.IGNORECASE)
             if runway_match:
                 runway_dir = 'N/A'
                 length = runway_match.group(1)
@@ -681,6 +677,14 @@ def generate_html():
                 <div class="hud-stat-value" id="hudRwyValue"></div>
             </div>
             <div class="hud-stat">
+                <div class="hud-stat-label">Length</div>
+                <div class="hud-stat-value" id="hudLengthValue"></div>
+            </div>
+            <div class="hud-stat">
+                <div class="hud-stat-label">Width</div>
+                <div class="hud-stat-value" id="hudWidthValue"></div>
+            </div>
+            <div class="hud-stat">
                 <div class="hud-stat-label">TPA</div>
                 <div class="hud-stat-value" id="hudTpaValue"></div>
             </div>
@@ -732,6 +736,8 @@ def generate_html():
             hudCtafValue.textContent = ctaf;
             hudElevValue.textContent = elev + "'";
             hudRwyValue.textContent = rwyDir;
+            hudLengthValue.textContent = rwy.split('x')[0] + "'";
+            hudWidthValue.textContent = rwy.split('x')[1] + "'";
             hudTpaValue.textContent = tpa + "'";
             hudOverlay.classList.add('active');
             document.body.style.overflow = 'hidden';
