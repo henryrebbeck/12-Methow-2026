@@ -108,13 +108,23 @@ def extract_airfield_data(pdf_path):
             length = 'N/A'
             width = 'N/A'
         
-        # Extract Latitude
-        lat_match = re.search(r'Latitude\s+N\s+(\d+)°\s*(\d+)′', text, re.IGNORECASE)
-        latitude = f"{lat_match.group(1)}.{lat_match.group(2)}" if lat_match else None
+        # Extract Latitude - format: N 47° 2393′ (decimal minutes)
+        lat_match = re.search(r'Latitude\s+N\s+(\d+)°\s*(\d+)\s*′', text, re.IGNORECASE)
+        if lat_match:
+            degrees = int(lat_match.group(1))
+            minutes_decimal = float(lat_match.group(2)) / 100
+            latitude = degrees + (minutes_decimal / 60)
+        else:
+            latitude = None
         
-        # Extract Longitude
-        lon_match = re.search(r'Longitude\s+W\s+(\d+)°\s*(\d+)′', text, re.IGNORECASE)
-        longitude = f"-{lon_match.group(1)}.{lon_match.group(2)}" if lon_match else None
+        # Extract Longitude - format: W 120° 1241′ (decimal minutes)
+        lon_match = re.search(r'Longitude\s+W\s+(\d+)°\s*(\d+)\s*′', text, re.IGNORECASE)
+        if lon_match:
+            degrees = int(lon_match.group(1))
+            minutes_decimal = float(lon_match.group(2)) / 100
+            longitude = -(degrees + (minutes_decimal / 60))
+        else:
+            longitude = None
         
         return {
             'ctaf': ctaf,
