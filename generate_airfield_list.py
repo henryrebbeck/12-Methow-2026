@@ -89,6 +89,13 @@ def extract_airfield_data(pdf_path):
         else:
             ctaf = 'N/A'
         
+        # Extract AWOS/ASOS frequency
+        awos_match = re.search(r'(AWOS|ASOS)[^0-9]*(\d{3})[^\d]*(\d{3})', text, re.IGNORECASE)
+        if awos_match:
+            awos = awos_match.group(2) + '.' + awos_match.group(3)
+        else:
+            awos = 'N/A'
+        
         # Extract Elevation - more permissive pattern
         elev_match = re.search(r'ELEV[^0-9]*(\d+)', text, re.IGNORECASE)
         elevation = elev_match.group(1) if elev_match else 'N/A'
@@ -149,6 +156,7 @@ def extract_airfield_data(pdf_path):
         
         return {
             'ctaf': ctaf,
+            'awos': awos,
             'elevation': elevation,
             'tpa': tpa,
             'length': length,
@@ -161,6 +169,7 @@ def extract_airfield_data(pdf_path):
         print(f"Error extracting data from {pdf_path}: {e}")
         return {
             'ctaf': 'N/A',
+            'awos': 'N/A',
             'elevation': 'N/A',
             'tpa': 'N/A',
             'length': 'N/A',
@@ -476,6 +485,9 @@ def generate_html():
         .hud-ctaf {{
             text-align: right;
             margin-top: 60px;
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
         }}
 
         .hud-ctaf-label {{
@@ -483,11 +495,34 @@ def generate_html():
             font-weight: 600;
             color: var(--hud-text);
             opacity: 0.8;
-            margin-bottom: 4px;
+            margin-bottom: 0;
         }}
 
         .hud-ctaf-value {{
             font-size: 56px;
+            font-weight: 900;
+            color: var(--hud-text);
+            line-height: 1;
+        }}
+
+        .hud-awos {{
+            text-align: right;
+            margin-top: 8px;
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+        }}
+
+        .hud-awos-label {{
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--hud-text);
+            opacity: 0.8;
+            margin-bottom: 0;
+        }}
+
+        .hud-awos-value {{
+            font-size: 32px;
             font-weight: 900;
             color: var(--hud-text);
             line-height: 1;
@@ -625,6 +660,7 @@ def generate_html():
              data-lon="{lon}"
              data-image="{image_data}"
              data-ctaf="{airfield.get('ctaf', 'N/A')}"
+             data-awos="{airfield.get('awos', 'N/A')}"
              data-elev="{airfield.get('elevation', 'N/A')}"
              data-rwy-dir="{airfield.get('runway_dir', 'N/A')}"
              data-rwy="{airfield.get('length', 'N/A')}'x{airfield.get('width', 'N/A')}'"
@@ -664,6 +700,10 @@ def generate_html():
                 <div class="hud-ctaf">
                     <div class="hud-ctaf-label">CTAF</div>
                     <div class="hud-ctaf-value" id="hudCtafValue"></div>
+                </div>
+                <div class="hud-awos">
+                    <div class="hud-awos-label">AWOS</div>
+                    <div class="hud-awos-value" id="hudAwosValue"></div>
                 </div>
             </div>
         </div>
@@ -723,6 +763,7 @@ def generate_html():
             const name = card.dataset.fullName;
             const code = card.dataset.fullCode;
             const ctaf = card.dataset.ctaf;
+            const awos = card.dataset.awos;
             const elev = card.dataset.elev;
             const rwyDir = card.dataset.rwyDir;
             const rwy = card.dataset.rwy;
@@ -734,6 +775,7 @@ def generate_html():
             hudAirportName.textContent = name;
             hudAirportCode.textContent = code;
             hudCtafValue.textContent = ctaf;
+            hudAwosValue.textContent = awos === 'N/A' ? '' : awos;
             hudElevValue.textContent = elev + "'";
             hudRwyValue.textContent = rwyDir;
             hudLengthValue.textContent = rwy.split('x')[0] + "'";
