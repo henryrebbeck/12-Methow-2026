@@ -817,12 +817,32 @@ def generate_html():
                             lat: position.coords.latitude,
                             lon: position.coords.longitude
                         };
+                        console.log('Location obtained:', userLocation);
                         calculateDistances();
                         sortByDistance();
                     },
                     (error) => {
                         console.error('Error getting location:', error);
-                        alert('Unable to get your location. Please enable location services.');
+                        let errorMsg = 'Unable to get your location. ';
+                        switch(error.code) {
+                            case error.PERMISSION_DENIED:
+                                errorMsg += 'Location permission denied. Please enable location services in Settings.';
+                                break;
+                            case error.POSITION_UNAVAILABLE:
+                                errorMsg += 'Location information unavailable.';
+                                break;
+                            case error.TIMEOUT:
+                                errorMsg += 'Location request timed out.';
+                                break;
+                            default:
+                                errorMsg += 'Please enable location services.';
+                        }
+                        alert(errorMsg);
+                    },
+                    {
+                        enableHighAccuracy: true,
+                        timeout: 10000,
+                        maximumAge: 0
                     }
                 );
             } else {
