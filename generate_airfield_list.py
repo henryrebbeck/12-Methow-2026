@@ -169,7 +169,7 @@ def generate_html():
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <meta name="theme-color" content="#000000">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -221,14 +221,14 @@ def generate_html():
         }}
 
         .title {{
-            font-size: 28px;
+            font-size: 32px;
             font-weight: 800;
             margin-bottom: 8px;
             color: #000;
         }}
 
         .subtitle {{
-            font-size: 16px;
+            font-size: 18px;
             color: var(--text-secondary);
             margin-bottom: 16px;
         }}
@@ -318,14 +318,14 @@ def generate_html():
         }}
 
         .airfield-code {{
-            font-size: 24px;
+            font-size: 28px;
             font-weight: 900;
             color: var(--accent-color);
             font-family: monospace;
         }}
 
         .airfield-name {{
-            font-size: 20px;
+            font-size: 24px;
             font-weight: 700;
             color: var(--text-primary);
         }}
@@ -334,7 +334,7 @@ def generate_html():
             display: flex;
             flex-wrap: wrap;
             gap: 16px;
-            font-size: 14px;
+            font-size: 16px;
             color: var(--text-secondary);
         }}
 
@@ -384,6 +384,28 @@ def generate_html():
             background-repeat: no-repeat;
             min-height: 50vh;
             position: relative;
+            touch-action: pan-x pan-y pinch-zoom;
+            user-select: none;
+            -webkit-user-select: none;
+            overflow: hidden;
+        }}
+
+        .hud-image-container {{
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }}
+
+        .hud-image {{
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            transition: transform 0.1s ease-out;
+            touch-action: pan-x pan-y pinch-zoom;
         }}
 
         .hud-top {{
@@ -403,7 +425,7 @@ def generate_html():
         }}
 
         .hud-airport-name {{
-            font-size: 28px;
+            font-size: 32px;
             font-weight: 900;
             color: var(--hud-text);
             margin-bottom: 8px;
@@ -411,7 +433,7 @@ def generate_html():
         }}
 
         .hud-airport-code {{
-            font-size: 22px;
+            font-size: 26px;
             font-weight: 700;
             color: var(--accent-color);
             font-family: monospace;
@@ -419,10 +441,11 @@ def generate_html():
 
         .hud-ctaf {{
             text-align: right;
+            margin-top: 60px;
         }}
 
         .hud-ctaf-label {{
-            font-size: 14px;
+            font-size: 16px;
             font-weight: 600;
             color: var(--hud-text);
             opacity: 0.8;
@@ -430,7 +453,7 @@ def generate_html():
         }}
 
         .hud-ctaf-value {{
-            font-size: 48px;
+            font-size: 56px;
             font-weight: 900;
             color: var(--hud-text);
             line-height: 1;
@@ -453,7 +476,7 @@ def generate_html():
         }}
 
         .hud-stat-label {{
-            font-size: 12px;
+            font-size: 14px;
             font-weight: 600;
             color: var(--hud-text);
             opacity: 0.8;
@@ -463,7 +486,7 @@ def generate_html():
         }}
 
         .hud-stat-value {{
-            font-size: 24px;
+            font-size: 28px;
             font-weight: 800;
             color: var(--hud-text);
             line-height: 1.1;
@@ -483,7 +506,7 @@ def generate_html():
             justify-content: center;
             cursor: pointer;
             z-index: 1001;
-            font-size: 24px;
+            font-size: 28px;
             color: white;
             font-weight: bold;
         }}
@@ -494,7 +517,7 @@ def generate_html():
 
         @media (max-width: 768px) {{
             .title {{
-                font-size: 24px;
+                font-size: 28px;
             }}
 
             .search-input {{
@@ -512,27 +535,27 @@ def generate_html():
             }}
 
             .airfield-code {{
-                font-size: 20px;
-            }}
-
-            .airfield-name {{
-                font-size: 18px;
-            }}
-
-            .hud-airport-name {{
                 font-size: 24px;
             }}
 
+            .airfield-name {{
+                font-size: 20px;
+            }}
+
+            .hud-airport-name {{
+                font-size: 28px;
+            }}
+
             .hud-airport-code {{
-                font-size: 18px;
+                font-size: 22px;
             }}
 
             .hud-ctaf-value {{
-                font-size: 36px;
+                font-size: 44px;
             }}
 
             .hud-stat-value {{
-                font-size: 20px;
+                font-size: 24px;
             }}
         }}
     </style>
@@ -594,6 +617,9 @@ def generate_html():
     <div class="hud-overlay" id="hudOverlay">
         <div class="hud-close" id="hudClose">×</div>
         <div class="hud-background" id="hudBackground">
+            <div class="hud-image-container" id="hudImageContainer">
+                <img class="hud-image" id="hudImage" src="" alt="Runway Diagram">
+            </div>
             <div class="hud-top">
                 <div class="hud-airport-info">
                     <div class="hud-airport-name" id="hudAirportName"></div>
@@ -629,6 +655,8 @@ def generate_html():
         const hudOverlay = document.getElementById('hudOverlay');
         const hudClose = document.getElementById('hudClose');
         const hudBackground = document.getElementById('hudBackground');
+        const hudImage = document.getElementById('hudImage');
+        const hudImageContainer = document.getElementById('hudImageContainer');
         const hudAirportName = document.getElementById('hudAirportName');
         const hudAirportCode = document.getElementById('hudAirportCode');
         const hudCtafValue = document.getElementById('hudCtafValue');
@@ -636,6 +664,14 @@ def generate_html():
         const hudRwyValue = document.getElementById('hudRwyValue');
         const hudTpaValue = document.getElementById('hudTpaValue');
         let userLocation = null;
+
+        // Touch gesture state
+        let scale = 1;
+        let panning = false;
+        let pointX = 0;
+        let pointY = 0;
+        let startX = 0;
+        let startY = 0;
 
         // HUD Overlay Functions
         function openHud(card) {
@@ -648,7 +684,7 @@ def generate_html():
             const tpa = card.dataset.tpa;
 
             if (image) {
-                hudBackground.style.backgroundImage = `url(${image})`;
+                hudImage.src = image;
             }
             hudAirportName.textContent = name;
             hudAirportCode.textContent = code;
@@ -658,12 +694,70 @@ def generate_html():
             hudTpaValue.textContent = tpa + "'";
             hudOverlay.classList.add('active');
             document.body.style.overflow = 'hidden';
+            
+            // Reset touch state
+            scale = 1;
+            pointX = 0;
+            pointY = 0;
+            updateTransform();
         }
 
         function closeHud() {
             hudOverlay.classList.remove('active');
             document.body.style.overflow = '';
         }
+
+        function updateTransform() {
+            hudImage.style.transform = `translate(${pointX}px, ${pointY}px) scale(${scale})`;
+        }
+
+        // Touch gesture handlers for pinch-to-zoom and pan
+        hudImageContainer.addEventListener('touchstart', function(e) {
+            if (e.touches.length === 1) {
+                panning = true;
+                startX = e.touches[0].clientX - pointX;
+                startY = e.touches[0].clientY - pointY;
+            } else if (e.touches.length === 2) {
+                panning = false;
+                const dx = e.touches[0].clientX - e.touches[1].clientX;
+                const dy = e.touches[0].clientY - e.touches[1].clientY;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                hudImageContainer.dataset.initialDistance = distance;
+                hudImageContainer.dataset.initialScale = scale;
+            }
+        });
+
+        hudImageContainer.addEventListener('touchmove', function(e) {
+            e.preventDefault();
+            if (e.touches.length === 1 && panning) {
+                pointX = e.touches[0].clientX - startX;
+                pointY = e.touches[0].clientY - startY;
+                updateTransform();
+            } else if (e.touches.length === 2) {
+                const dx = e.touches[0].clientX - e.touches[1].clientX;
+                const dy = e.touches[0].clientY - e.touches[1].clientY;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                const initialDistance = parseFloat(hudImageContainer.dataset.initialDistance);
+                const initialScale = parseFloat(hudImageContainer.dataset.initialScale);
+                const newScale = initialScale * (distance / initialDistance);
+                scale = Math.min(Math.max(newScale, 0.5), 5);
+                updateTransform();
+            }
+        });
+
+        hudImageContainer.addEventListener('touchend', function(e) {
+            if (e.touches.length === 0) {
+                panning = false;
+            }
+        });
+
+        // Double-tap to reset zoom
+        hudImageContainer.addEventListener('dblclick', function() {
+            scale = 1;
+            pointX = 0;
+            pointY = 0;
+            updateTransform();
+        });
 
         hudClose.addEventListener('click', closeHud);
         hudOverlay.addEventListener('click', (e) => {
