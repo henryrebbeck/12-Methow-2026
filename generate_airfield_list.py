@@ -97,16 +97,27 @@ def extract_airfield_data(pdf_path):
         tpa_match = re.search(r'TPA[^0-9]*(\d+)', text, re.IGNORECASE)
         tpa = tpa_match.group(1) if tpa_match else 'N/A'
         
-        # Extract Runway dimensions (length × width) - handle spacing variations
-        runway_match = re.search(r'Runway[^;]*;\s*(\d+)\s*′?\s*×\s*(\d+)\s*′?', text, re.IGNORECASE)
+        # Extract Runway dimensions and direction - handle spacing variations
+        runway_match = re.search(r'Runway[^;]*;\s*(\d+/\d+)\s*;\s*(\d+)\s*′?\s*×\s*(\d+)\s*′?', text, re.IGNORECASE)
         if not runway_match:
-            runway_match = re.search(r'Runway[^;]*;(\d+)′×(\d+)′', text, re.IGNORECASE)
+            runway_match = re.search(r'Runway[^;]*;(\d+/\d+);(\d+)′×(\d+)′', text, re.IGNORECASE)
         if runway_match:
-            length = runway_match.group(1)
-            width = runway_match.group(2)
+            runway_dir = runway_match.group(1)
+            length = runway_match.group(2)
+            width = runway_match.group(3)
         else:
-            length = 'N/A'
-            width = 'N/A'
+            # Fallback: try to extract just dimensions
+            runway_match = re.search(r'Runway[^;]*;\s*(\d+)\s*′?\s*×\s*(\d+)\s*′?', text, re.IGNORECASE)
+            if not runway_match:
+                runway_match = re.search(r'Runway[^;]*;(\d+)′×(\d+)′', text, re.IGNORECASE)
+            if runway_match:
+                runway_dir = 'N/A'
+                length = runway_match.group(1)
+                width = runway_match.group(2)
+            else:
+                runway_dir = 'N/A'
+                length = 'N/A'
+                width = 'N/A'
         
         # Extract Latitude - format: N 47° 2393′ (decimal minutes)
         lat_match = re.search(r'Latitude\s*N\s*(\d+)\s*[°\*]\s*(\d+)\s*[′\']', text, re.IGNORECASE)
@@ -146,6 +157,7 @@ def extract_airfield_data(pdf_path):
             'tpa': tpa,
             'length': length,
             'width': width,
+            'runway_dir': runway_dir,
             'latitude': latitude,
             'longitude': longitude
         }
@@ -156,7 +168,8 @@ def extract_airfield_data(pdf_path):
             'elevation': 'N/A',
             'tpa': 'N/A',
             'length': 'N/A',
-            'width': 'N/A'
+            'width': 'N/A',
+            'runway_dir': 'N/A'
         }
 
 def generate_html():
@@ -617,6 +630,7 @@ def generate_html():
              data-image="{image_data}"
              data-ctaf="{airfield.get('ctaf', 'N/A')}"
              data-elev="{airfield.get('elevation', 'N/A')}"
+             data-rwy-dir="{airfield.get('runway_dir', 'N/A')}"
              data-rwy="{airfield.get('length', 'N/A')}'x{airfield.get('width', 'N/A')}'"
              data-tpa="{airfield.get('tpa', 'N/A')}"
              data-full-name="{airfield['name']}"
@@ -626,6 +640,7 @@ def generate_html():
                 <div class="airfield-name">{airfield['name']}</div>
             </div>
             <div class="airfield-details">
+                <div class="detail-item">Rwy: <span>{airfield.get('runway_dir', 'N/A')}</span></div>
                 <div class="detail-item">Length: <span>{airfield.get('length', 'N/A')}'</span></div>
                 <div class="detail-item">Width: <span>{airfield.get('width', 'N/A')}'</span></div>
                 <div class="detail-item">Elev: <span>{airfield.get('elevation', 'N/A')}'</span></div>
@@ -705,6 +720,7 @@ def generate_html():
             const code = card.dataset.fullCode;
             const ctaf = card.dataset.ctaf;
             const elev = card.dataset.elev;
+            const rwyDir = card.dataset.rwyDir;
             const rwy = card.dataset.rwy;
             const tpa = card.dataset.tpa;
 
@@ -715,7 +731,7 @@ def generate_html():
             hudAirportCode.textContent = code;
             hudCtafValue.textContent = ctaf;
             hudElevValue.textContent = elev + "'";
-            hudRwyValue.textContent = rwy;
+            hudRwyValue.textContent = rwyDir;
             hudTpaValue.textContent = tpa + "'";
             hudOverlay.classList.add('active');
             document.body.style.overflow = 'hidden';
