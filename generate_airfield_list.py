@@ -125,54 +125,88 @@ def extract_airfield_data(pdf_path):
         # Extract Latitude - format: N 48° 06′29′ (degrees, minutes, seconds)
         # Handle various prime/special characters between values
         # Also handle compact format like 48° 36′49′ (no space between minutes and seconds)
+        # Also handle decimal format like N 47° 31.80′
+        # Also handle dash format like 47-08-40.789 (degrees-minutes-seconds.decimal)
         # Some PDFs don't extract N/W, so look for Latitude label
-        lat_match = re.search(r'Latitude.*?(\d+)\D+(\d+)\D+(\d+)', text, re.IGNORECASE)
+        lat_match = re.search(r'Latitude.*?(\d+)-(\d+)-(\d+)\D+(\d+)', text, re.IGNORECASE)
         if lat_match:
+            # Dash format: 47-08-40.789
             degrees = int(lat_match.group(1))
             minutes = int(lat_match.group(2))
-            third_val = int(lat_match.group(3))
-            # If third value > 60, it's decimal minutes (e.g., 30.989), not seconds
-            if third_val > 60:
-                minutes = float(f"{minutes}.{third_val:03d}")
-                latitude = degrees + (minutes / 60)
-            else:
-                seconds = third_val
-                latitude = degrees + (minutes / 60) + (seconds / 3600)
+            seconds = float(f"{lat_match.group(3)}.{lat_match.group(4)}")
+            latitude = degrees + (minutes / 60) + (seconds / 3600)
         else:
-            # Try alternative format
-            lat_match = re.search(r'Lat.*?(\d+)\s*[°\*]\s*(\d+)', text, re.IGNORECASE)
+            lat_match = re.search(r'Latitude.*?(\d+)\D+(\d+)\.(\d+)', text, re.IGNORECASE)
             if lat_match:
+                # Decimal format: 47° 31.80′
                 degrees = int(lat_match.group(1))
-                minutes = float(lat_match.group(2)) / 100
+                minutes = float(f"{lat_match.group(2)}.{lat_match.group(3)}")
                 latitude = degrees + (minutes / 60)
             else:
-                latitude = None
+                lat_match = re.search(r'Latitude.*?(\d+)\D+(\d+)\D+(\d+)', text, re.IGNORECASE)
+                if lat_match:
+                    degrees = int(lat_match.group(1))
+                    minutes = int(lat_match.group(2))
+                    third_val = int(lat_match.group(3))
+                    # If third value > 60, it's decimal minutes (e.g., 30.989), not seconds
+                    if third_val > 60:
+                        minutes = float(f"{minutes}.{third_val}")
+                        latitude = degrees + (minutes / 60)
+                    else:
+                        seconds = third_val
+                        latitude = degrees + (minutes / 60) + (seconds / 3600)
+                else:
+                    # Try alternative format
+                    lat_match = re.search(r'Lat.*?(\d+)\s*[°\*]\s*(\d+)', text, re.IGNORECASE)
+                    if lat_match:
+                        degrees = int(lat_match.group(1))
+                        minutes = float(lat_match.group(2)) / 100
+                        latitude = degrees + (minutes / 60)
+                    else:
+                        latitude = None
         
         # Extract Longitude - format: W 119° 43′24′ (degrees, minutes, seconds)
         # Handle various prime/special characters between values
         # Also handle compact format like 123° 09′58′ (no space between minutes and seconds)
+        # Also handle decimal format like W 122° 18.12′
+        # Also handle dash format like 124-11-20.662 (degrees-minutes-seconds.decimal)
         # Some PDFs don't extract N/W, so look for Longitude label
-        lon_match = re.search(r'Longitude.*?(\d+)\D+(\d+)\D+(\d+)', text, re.IGNORECASE)
+        lon_match = re.search(r'Longitude.*?(\d+)-(\d+)-(\d+)\D+(\d+)', text, re.IGNORECASE)
         if lon_match:
+            # Dash format: 124-11-20.662
             degrees = int(lon_match.group(1))
             minutes = int(lon_match.group(2))
-            third_val = int(lon_match.group(3))
-            # If third value > 60, it's decimal minutes (e.g., 54.911), not seconds
-            if third_val > 60:
-                minutes = float(f"{minutes}.{third_val:03d}")
-                longitude = -(degrees + (minutes / 60))
-            else:
-                seconds = third_val
-                longitude = -(degrees + (minutes / 60) + (seconds / 3600))
+            seconds = float(f"{lon_match.group(3)}.{lon_match.group(4)}")
+            longitude = -(degrees + (minutes / 60) + (seconds / 3600))
         else:
-            # Try alternative format
-            lon_match = re.search(r'Lon.*?(\d+)\s*[°\*]\s*(\d+)', text, re.IGNORECASE)
+            lon_match = re.search(r'Longitude.*?(\d+)\D+(\d+)\.(\d+)', text, re.IGNORECASE)
             if lon_match:
+                # Decimal format: 122° 18.12′
                 degrees = int(lon_match.group(1))
-                minutes = float(lon_match.group(2)) / 100
+                minutes = float(f"{lon_match.group(2)}.{lon_match.group(3)}")
                 longitude = -(degrees + (minutes / 60))
             else:
-                longitude = None
+                lon_match = re.search(r'Longitude.*?(\d+)\D+(\d+)\D+(\d+)', text, re.IGNORECASE)
+                if lon_match:
+                    degrees = int(lon_match.group(1))
+                    minutes = int(lon_match.group(2))
+                    third_val = int(lon_match.group(3))
+                    # If third value > 60, it's decimal minutes (e.g., 54.911), not seconds
+                    if third_val > 60:
+                        minutes = float(f"{minutes}.{third_val}")
+                        longitude = -(degrees + (minutes / 60))
+                    else:
+                        seconds = third_val
+                        longitude = -(degrees + (minutes / 60) + (seconds / 3600))
+                else:
+                    # Try alternative format
+                    lon_match = re.search(r'Lon.*?(\d+)\s*[°\*]\s*(\d+)', text, re.IGNORECASE)
+                    if lon_match:
+                        degrees = int(lon_match.group(1))
+                        minutes = float(lon_match.group(2)) / 100
+                        longitude = -(degrees + (minutes / 60))
+                    else:
+                        longitude = None
         
         return {
             'ctaf': ctaf,
