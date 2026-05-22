@@ -369,6 +369,7 @@ def generate_html():
             justify-content: space-between;
             align-items: center;
             margin-bottom: 12px;
+            padding-right: 90px;
         }}
 
         .airfield-code {{
