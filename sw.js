@@ -1,4 +1,4 @@
-const CACHE_NAME = 'airfield-directory-v1';
+const CACHE_NAME = 'airfield-directory-v2';
 const urlsToCache = [
   './',
   './index.html',
