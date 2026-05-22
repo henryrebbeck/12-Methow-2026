@@ -16,12 +16,19 @@ self.addEventListener('install', function(event) {
 
 self.addEventListener('fetch', function(event) {
   event.respondWith(
-    caches.match(event.request)
+    fetch(event.request)
       .then(function(response) {
-        if (response) {
-          return response;
-        }
-        return fetch(event.request);
+        // Clone the response before caching
+        const responseToCache = response.clone();
+        caches.open(CACHE_NAME)
+          .then(function(cache) {
+            cache.put(event.request, responseToCache);
+          });
+        return response;
+      })
+      .catch(function() {
+        // If network fails, try cache
+        return caches.match(event.request);
       })
   );
 });

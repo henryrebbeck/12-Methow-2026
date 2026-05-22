@@ -122,35 +122,55 @@ def extract_airfield_data(pdf_path):
                 length = 'N/A'
                 width = 'N/A'
         
-        # Extract Latitude - format: N 47° 2393′ (decimal minutes)
-        lat_match = re.search(r'Latitude\s*N\s*(\d+)\s*[°\*]\s*(\d+)\s*[′\']', text, re.IGNORECASE)
+        # Extract Latitude - format: N 48° 06′29′ (degrees, minutes, seconds)
+        # Handle various prime/special characters between values
+        # Also handle compact format like 48° 36′49′ (no space between minutes and seconds)
+        # Some PDFs don't extract N/W, so look for Latitude label
+        lat_match = re.search(r'Latitude.*?(\d+)\D+(\d+)\D+(\d+)', text, re.IGNORECASE)
         if lat_match:
             degrees = int(lat_match.group(1))
-            minutes_decimal = float(lat_match.group(2)) / 100
-            latitude = degrees + (minutes_decimal / 60)
+            minutes = int(lat_match.group(2))
+            third_val = int(lat_match.group(3))
+            # If third value > 60, it's decimal minutes (e.g., 30.989), not seconds
+            if third_val > 60:
+                minutes = float(f"{minutes}.{third_val:03d}")
+                latitude = degrees + (minutes / 60)
+            else:
+                seconds = third_val
+                latitude = degrees + (minutes / 60) + (seconds / 3600)
         else:
             # Try alternative format
             lat_match = re.search(r'Lat.*?(\d+)\s*[°\*]\s*(\d+)', text, re.IGNORECASE)
             if lat_match:
                 degrees = int(lat_match.group(1))
-                minutes_decimal = float(lat_match.group(2)) / 100
-                latitude = degrees + (minutes_decimal / 60)
+                minutes = float(lat_match.group(2)) / 100
+                latitude = degrees + (minutes / 60)
             else:
                 latitude = None
         
-        # Extract Longitude - format: W 120° 1241′ (decimal minutes)
-        lon_match = re.search(r'Longitude\s*W\s*(\d+)\s*[°\*]\s*(\d+)\s*[′\']', text, re.IGNORECASE)
+        # Extract Longitude - format: W 119° 43′24′ (degrees, minutes, seconds)
+        # Handle various prime/special characters between values
+        # Also handle compact format like 123° 09′58′ (no space between minutes and seconds)
+        # Some PDFs don't extract N/W, so look for Longitude label
+        lon_match = re.search(r'Longitude.*?(\d+)\D+(\d+)\D+(\d+)', text, re.IGNORECASE)
         if lon_match:
             degrees = int(lon_match.group(1))
-            minutes_decimal = float(lon_match.group(2)) / 100
-            longitude = -(degrees + (minutes_decimal / 60))
+            minutes = int(lon_match.group(2))
+            third_val = int(lon_match.group(3))
+            # If third value > 60, it's decimal minutes (e.g., 54.911), not seconds
+            if third_val > 60:
+                minutes = float(f"{minutes}.{third_val:03d}")
+                longitude = -(degrees + (minutes / 60))
+            else:
+                seconds = third_val
+                longitude = -(degrees + (minutes / 60) + (seconds / 3600))
         else:
             # Try alternative format
             lon_match = re.search(r'Lon.*?(\d+)\s*[°\*]\s*(\d+)', text, re.IGNORECASE)
             if lon_match:
                 degrees = int(lon_match.group(1))
-                minutes_decimal = float(lon_match.group(2)) / 100
-                longitude = -(degrees + (minutes_decimal / 60))
+                minutes = float(lon_match.group(2)) / 100
+                longitude = -(degrees + (minutes / 60))
             else:
                 longitude = None
         
@@ -178,8 +198,8 @@ def extract_airfield_data(pdf_path):
         }
 
 def generate_html():
-    # Get all PDF files in WSDOT Airfields subfolder
-    pdf_folder = 'WSDOT Airfields'
+    # Get all PDF files in Washington Airfield PDFs subfolder
+    pdf_folder = 'Washington Airfield PDFs'
     if not os.path.exists(pdf_folder):
         print(f"Folder '{pdf_folder}' not found!")
         return
@@ -1073,10 +1093,161 @@ self.addEventListener('activate', function(event) {
     with open('sw.js', 'w', encoding='utf-8') as f:
         f.write(sw_content)
     
+    # Generate map.html
+    map_html = '''<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Airfield Map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        #map {
+            height: 100vh;
+            width: 100%;
+        }
+        .custom-marker {
+            background: #e63946;
+            border: 3px solid #fff;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+        .popup-content {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        .popup-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .popup-code {
+            font-size: 24px;
+            font-weight: 900;
+            color: #0066cc;
+            font-family: monospace;
+        }
+        .popup-name {
+            font-size: 20px;
+            font-weight: 700;
+            color: #000;
+        }
+        .popup-image {
+            width: 100%;
+            height: auto;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            border: 2px solid #000;
+        }
+        .popup-details {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            font-size: 14px;
+            color: #333;
+        }
+        .popup-detail-item {
+            font-weight: 500;
+        }
+        .popup-detail-item span {
+            font-weight: 700;
+            color: #000;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        const airfields = [
+'''
+    
+    for airfield in airfields:
+        lat = airfield.get('latitude')
+        lon = airfield.get('longitude')
+        code = airfield.get('code', 'UNK')
+        name = airfield.get('name', 'Unknown')
+        image = airfield.get('image_base64', '')
+        ctaf = airfield.get('ctaf', 'N/A')
+        awos = airfield.get('awos', 'N/A')
+        elev = airfield.get('elevation', 'N/A')
+        rwy_dir = airfield.get('runway_dir', 'N/A')
+        length = airfield.get('length', 'N/A')
+        width = airfield.get('width', 'N/A')
+        tpa = airfield.get('tpa', 'N/A')
+        
+        if lat is not None and lon is not None:
+            map_html += f'            {{ lat: {lat}, lon: {lon}, code: "{code}", name: "{name}", image: "{image}", ctaf: "{ctaf}", awos: "{awos}", elev: "{elev}", rwy_dir: "{rwy_dir}", length: "{length}", width: "{width}", tpa: "{tpa}" }},\n'
+    
+    map_html = map_html.rstrip(',\n') + '\n'
+    
+    map_html += '''        ];
+        
+        // Initialize map centered on Washington state
+        const map = L.map('map').setView([47.5, -120.5], 7);
+        
+        // Add OpenStreetMap tiles
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+        
+        // Add markers for each airfield
+        airfields.forEach(airfield => {
+            const marker = L.circleMarker([airfield.lat, airfield.lon], {
+                radius: 8,
+                fillColor: '#e63946',
+                color: '#fff',
+                weight: 2,
+                opacity: 1,
+                fillOpacity: 0.8
+            }).addTo(map);
+            
+            // Add tooltip on hover
+            marker.bindTooltip(`<b>${airfield.code}</b><br>${airfield.name}`, {
+                permanent: false,
+                direction: 'top',
+                offset: [0, -10]
+            });
+            
+            // Add popup on click with detailed information
+            const popupContent = `
+                <div class="popup-content">
+                    <div class="popup-header">
+                        <div class="popup-code">${airfield.code}</div>
+                        <div class="popup-name">${airfield.name}</div>
+                    </div>
+                    ${airfield.image ? `<img src="${airfield.image}" class="popup-image" alt="${airfield.name}">` : ''}
+                    <div class="popup-details">
+                        <div class="popup-detail-item">Rwy: <span>${airfield.rwy_dir}</span></div>
+                        <div class="popup-detail-item">Length: <span>${airfield.length}'</span></div>
+                        <div class="popup-detail-item">Width: <span>${airfield.width}'</span></div>
+                        <div class="popup-detail-item">Elev: <span>${airfield.elev}'</span></div>
+                        <div class="popup-detail-item">CTAF: <span>${airfield.ctaf}</span></div>
+                        <div class="popup-detail-item">AWOS: <span>${airfield.awos}</span></div>
+                    </div>
+                </div>
+            `;
+            marker.bindPopup(popupContent, { maxWidth: 400 });
+        });
+    </script>
+</body>
+</html>'''
+    
+    with open('map.html', 'w', encoding='utf-8') as f:
+        f.write(map_html)
+    
     print(f"Generated PWA package with {len(airfields)} airfields:")
     print(f"  - index.html (with embedded Base64 images)")
     print(f"  - manifest.json (PWA configuration)")
     print(f"  - sw.js (Service Worker for offline caching)")
+    print(f"  - map.html (Interactive airfield map)")
     print(f"\nUpload all three files to iCloud Drive for offline PWA functionality")
 
 if __name__ == '__main__':
