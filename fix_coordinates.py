@@ -15,6 +15,7 @@ ourairports_corrections = {
     "W33": (48.537300, -123.010002),  # Friday Harbor SPB
     "13W": (48.257000, -122.436996),  # Camano Island
     "70S": (47.787201, -117.358002),  # Mead Flying Service
+    "2S5": (47.655998, -120.056000),  # Waterville
 }
 
 # Read map.html
